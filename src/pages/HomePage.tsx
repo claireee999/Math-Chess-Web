@@ -1,19 +1,28 @@
 import React from 'react';
 import { Button, ButtonGroup } from '@chakra-ui/react';
 import { Heading } from '@chakra-ui/react';
+import { useNavigate } from 'react-router-dom';
 
 type HomePageProps = {
     onStartGame: () => void;
 };
 
-const HomePage: React.FC<HomePageProps> = ({ onStartGame }) => {
-    const gradient = 'linear-gradient(45deg, #FF0080, #7928CA)';
+const HomePage: React.FC = () => {
+    const navigate = useNavigate();
+    const handleStartGame = () => {
+        navigate('/game');
+        console.log('Game started!');
+
+
+    };
+
+    const gradient = `linear-gradient(45deg, #FF0080, #7928CA)`;
 
     const headingStyle: React.CSSProperties = {
         colorScheme: gradient,
         WebkitBackgroundClip: 'text',
         textAlign: 'center',
-        marginTop: '4',
+        marginTop: `4`,
         fontSize: '50px',
         fontFamily: 'cursive',
         textShadow: "2px 2px 4px rgba(0, 0, 0, 0.4)",
@@ -52,15 +61,15 @@ const HomePage: React.FC<HomePageProps> = ({ onStartGame }) => {
             <Heading as="h1" size="2xl" style={headingStyle}>
                 Math Chess
             </Heading>
-            <div style={buttonContainerStyle}>
-            <Button >
-                Start
-            </Button>
-            <Button style={buttonStyle}>
-                Settings
-            </Button>
+            <div style={buttonContainerStyle} onClick={handleStartGame}>
+                <Button >
+                    Start
+                </Button>
+                <Button style={buttonStyle}>
+                    Settings
+                </Button>
             </div>
-    </div>
+        </div>
     );
 };
 
