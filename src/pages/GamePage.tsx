@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, ButtonGroup } from '@chakra-ui/react';
 import { Heading } from '@chakra-ui/react';
+import ChineseCheckerBoard from "../components/ChineseCheckerBoard";
 
 type HomePageProps = {
     onStartGame: () => void;
@@ -21,9 +22,7 @@ const GamePage: React.FC = ({}) => {
 
     return (
         <div>
-            <Heading as="h1" size="2xl" style={headingStyle}>
-               Game
-            </Heading>
+            <ChineseCheckerBoard />
         </div>
     );
 };
