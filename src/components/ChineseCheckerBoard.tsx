@@ -1,32 +1,84 @@
 import React, { useEffect, useState } from 'react';
-import {useBoolean} from "@chakra-ui/react";
+import {Button, useBoolean} from "@chakra-ui/react";
 
 enum Player {
+    EMPTY,
     PLAYER1,
     PLAYER2,
-    EMPTY,
     NONE
 }
-const ChineseCheckerBoard: React.FC = () => {
-    class State {
-        // [1, 0-9]: Player1; [2, 0-9]: Player2; [-1, -1]: invalid; [0, -1]: empty
-        player: Player;
-        value: number;
-        x: number;
-        y: number;
-        clicked: boolean;
 
-        constructor(player: Player, value: number, x: number, y: number, clicked = false) {
-            this.player = player;
-            this.value = value;
-            this.x = x;
-            this.y = y;
-            this.clicked = clicked;
+enum Direction {
+    UP,
+    DOWN,
+    UPLEFT,
+    UPRIGHT,
+    DOWNLEFT,
+    DOWNRIGHT
+}
+class Piece {
+    // [1, 0-9]: Player1; [2, 0-9]: Player2; [-1, -1]: invalid; [0, -1]: empty
+    player: Player;
+    value: number;
+    x: number;
+    y: number;
+    clicked: boolean;
+
+    constructor(player: Player, value: number, x: number, y: number, clicked = false) {
+        this.player = player;
+        this.value = value;
+        this.x = x;
+        this.y = y;
+        this.clicked = clicked;
+    }
+}
+const boardModel: Piece[][] = [...Array(15)].map(() => Array(15).fill(new Piece(Player.EMPTY, -1, -1, -1)));
+const initializeBoard = () => {
+    for (let row = 0; row < 15; row++) {
+        for (let col = 0; col < 15; col++) {
+            if ((row + col) % 2 === 0 || Math.abs(row - 7) + Math.abs(col - 7) > 7) {
+                boardModel[row][col] = new Piece(Player.NONE, -1, row, col);
+            } else if (row < 4) {
+                if (row === 0) {
+                    boardModel[row][col] = new Piece(Player.PLAYER1, 0, row, col);
+                } else if (row === 1) {
+                    if (col === 6) boardModel[row][col] = new Piece(Player.PLAYER1, 9, row, col);
+                    else boardModel[row][col] = new Piece(Player.PLAYER1, 8, row, col);
+                } else if (row === 2) {
+                    if (col === 5) boardModel[row][col] = new Piece(Player.PLAYER1, 5, row, col);
+                    else if (col === 7) boardModel[row][col] = new Piece(Player.PLAYER1, 6, row, col);
+                    else boardModel[row][col] = new Piece(Player.PLAYER1, 7, row, col);
+                } else if (row === 3) {
+                    if (col === 4) boardModel[row][col] = new Piece(Player.PLAYER1, 4, row, col);
+                    else if (col === 6) boardModel[row][col] = new Piece(Player.PLAYER1, 3, row, col);
+                    else if (col === 8) boardModel[row][col] = new Piece(Player.PLAYER1, 2, row, col);
+                    else boardModel[row][col] = new Piece(Player.PLAYER1, 1, row, col);
+                }
+            } else if (row > 10) {
+                if (row === 14) {
+                    boardModel[row][col] = new Piece(Player.PLAYER2, 0, row, col);
+                } else if (row === 13) {
+                    if (col === 6) boardModel[row][col] = new Piece(Player.PLAYER2, 8, row, col);
+                    else boardModel[row][col] = new Piece(Player.PLAYER2, 9, row, col);
+                } else if (row === 12) {
+                    if (col === 5) boardModel[row][col] = new Piece(Player.PLAYER2, 7, row, col);
+                    else if (col === 7) boardModel[row][col] = new Piece(Player.PLAYER2, 6, row, col);
+                    else boardModel[row][col] = new Piece(Player.PLAYER2, 5, row, col);
+                } else if (row === 11) {
+                    if (col === 4) boardModel[row][col] = new Piece(Player.PLAYER2, 1, row, col);
+                    else if (col === 6) boardModel[row][col] = new Piece(Player.PLAYER2, 2, row, col);
+                    else if (col === 8) boardModel[row][col] = new Piece(Player.PLAYER2, 3, row, col);
+                    else boardModel[row][col] = new Piece(Player.PLAYER2, 4, row, col);
+                }
+            } else  boardModel[row][col] = new Piece(Player.EMPTY, -1, row, col);
         }
     }
+}
 
-    //const [board, setBoard] = useState<number[][][]>([...Array(15)].map(() => Array(15).fill([0,-1])));
-    const [board, setBoard] = useState<State[][]>([...Array(15)].map(() => Array(15).fill(new State(Player.NONE, -1, -1, -1))));
+const ChineseCheckerBoard: React.FC = () => {
+    const [board, setBoard] = useState<Piece[][]>(boardModel);
+    console.log(board);
+    const [boardHistory, setBoardHistory] = useState([]);
 
     const player1: string[] = ["#FBB6CE", "#F687B3"];
     const player2: string[] = ["#BEE3F8", "#90CDF4"];
@@ -35,10 +87,94 @@ const ChineseCheckerBoard: React.FC = () => {
 
     const [selectedPiece, setSelectedPiece] = useState<{x: number, y: number}>();
 
-    const drawPiece = (x: number, y: number, state: State) => {
+     const findValidMoves = (x: number, y: number) => {
+         const validMoves = Array(6).fill({ x: -1, y: -1 });
+
+          for (let i = y; i >=0; i--) {
+              if (boardModel[x][i].player === Player.NONE){
+                  break;
+              }
+              if (boardModel[x][i].player === Player.EMPTY){
+                  validMoves[Direction.UP] = {x, i};
+                  break;
+              }
+          }
+
+          for (let i = y; i <=15; i++){
+              if (boardModel[x][i].player === Player.NONE){
+                  break;
+              }
+              if (boardModel[x][i].player === Player.EMPTY){
+                  validMoves[Direction.DOWN] = {x,i};
+                  break;
+              }
+          }
+
+         for (let i = y-1; i >=0; i--) {
+             if (boardModel[x-1][i].player === Player.NONE){
+                 break;
+             }
+             if (boardModel[x-1][i].player === Player.EMPTY){
+                 validMoves[Direction.UPLEFT] = {x: x-1, y: i};
+                 break;
+             }
+         }
+
+         for (let i = y+1; i <=15; i++){
+             if (boardModel[x-1][i].player === Player.NONE){
+                 break;
+             }
+             if (boardModel[x-1][i].player === Player.EMPTY){
+                 validMoves[Direction.DOWNLEFT] = {x: x-1, y: i};
+                 break;
+             }
+         }
+
+         for (let i = y-1; i >=0; i--) {
+             console.log(x+1,i);
+             if (x+1 >=15) break;
+             if (boardModel[x+1][i].player === Player.NONE){
+                 break;
+             }
+             if (boardModel[x+1][i].player === Player.EMPTY){
+                 validMoves[Direction.UPRIGHT] = {x: x+1, y: i};
+                 console.log(validMoves);
+                 break;
+             }
+         }
+
+         for (let i = y+1; i <=15; i++){
+             if (x+1 >=15) break;
+             if (boardModel[x+1][i].player === Player.NONE){
+                 break;
+             }
+             if (boardModel[x+1][i].player === Player.EMPTY){
+                 validMoves[Direction.DOWNRIGHT] = {x: x+1, y: i};
+                 break;
+             }
+         }
+
+          return validMoves;
+          }
+
+
+    const movePiece = (oldPiece: { x: number; y: number }, newX: number, newY: number) => {
+        const movingPiece = boardModel[oldPiece.x][oldPiece.y];
+        const validMoves = findValidMoves(oldPiece.x, oldPiece.y);
+        console.log(validMoves);
+        boardModel[newX][newY] = new Piece(movingPiece.player, movingPiece.value, newX, newY);
+        boardModel[oldPiece.x][oldPiece.y] = new Piece(Player.EMPTY, -1, oldPiece.x, oldPiece.y);
+        setSelectedPiece(undefined);
+        setBoard([...boardModel]);
+        console.log( boardModel[newX][newY], boardModel[oldPiece.x][oldPiece.y]);
+        //setMoveStack([...moveStack.slice(0, currentMove + 1), newBoard]);
+        return true;
+    }
+
+    const drawPiece = (x: number, y: number, piece: Piece) => {
         const pieceStyles: { [key in Player]: string } = {
-            [Player.PLAYER1]: player1[Number(state.clicked)],
-            [Player.PLAYER2]: player2[Number(state.clicked)],
+            [Player.PLAYER1]: player1[Number(piece.clicked)],
+            [Player.PLAYER2]: player2[Number(piece.clicked)],
             [Player.NONE]: 'transparent',
             [Player.EMPTY]: empty
         };
@@ -51,7 +187,8 @@ const ChineseCheckerBoard: React.FC = () => {
             height: "50px",
             lineHeight: "45px",
             borderRadius: "50%",
-            backgroundColor: pieceStyles[state.player],
+            backgroundColor: pieceStyles[piece.player],
+            zIndex: piece.player === Player.NONE ? "-1" : "1",
             textAlign: "center",
             verticalAlign: "middle",
         };
@@ -63,8 +200,21 @@ const ChineseCheckerBoard: React.FC = () => {
         };
 
         const handleClick = () => {
-            if (state.player === Player.NONE) {
+            if (piece.player === Player.NONE) {
                 return
+            }
+            if (piece.player === Player.EMPTY) {
+                if (selectedPiece){
+                   if (true){
+                       movePiece(selectedPiece, x, y);
+                       //change player
+
+                   }
+                }
+                return
+            }
+            if (selectedPiece) {
+                boardModel[selectedPiece?.x][selectedPiece?.y].clicked = false;
             }
             if (selectedPiece?.x === x && selectedPiece?.y === y) {
                 setSelectedPiece(undefined);
@@ -75,65 +225,27 @@ const ChineseCheckerBoard: React.FC = () => {
 
         return (
             <div style={style} onClick={handleClick}>
-                {state.value >= 0 && <span style={textStyle}>
-                    {state.value}</span>}
+                {piece.value >= 0 && <span style={textStyle}>
+                    {piece.value}</span>}
             </div>
         );
     };
 
     useEffect(() => {
-        const newBoard: State[][] = [...Array(15)].map(() => Array(15).fill(new State(Player.EMPTY, -1, -1, -1)));
         //const newBoard = [...Array(15)].map(() => Array(15).fill([0,-1]));
-
-        for (let row = 0; row < 15; row++) {
-            for (let col = 0; col < 15; col++) {
-                if ((row + col) % 2 === 0 || Math.abs(row - 7) + Math.abs(col - 7) > 7) {
-                    //newBoard[row][col] = -1;
-                    newBoard[row][col] = new State(Player.NONE, -1, row, col);
-                } else if (row < 4) {
-                    //newBoard[row][col] = 1;
-                    if (row === 0) {
-                         newBoard[row][col] = new State(Player.PLAYER1, 0, row, col);
-                    } else if (row === 1) {
-                        if (col === 6) newBoard[row][col] = new State(Player.PLAYER1, 9, row, col);
-                        else newBoard[row][col] = new State(Player.PLAYER1, 8, row, col);
-                    } else if (row === 2) {
-                        if (col === 5) newBoard[row][col] = new State(Player.PLAYER1, 5, row, col);
-                        else if (col === 7) newBoard[row][col] = new State(Player.PLAYER1, 6, row, col);
-                        else newBoard[row][col] = newBoard[row][col] = new State(Player.PLAYER1, 7, row, col);
-                    } else if (row === 3) {
-                        if (col === 4) newBoard[row][col] = newBoard[row][col] = new State(Player.PLAYER1, 4, row, col);
-                        else if (col === 6) newBoard[row][col] = newBoard[row][col] = new State(Player.PLAYER1, 3, row, col);
-                        else if (col === 8) newBoard[row][col] = newBoard[row][col] = new State(Player.PLAYER1, 2, row, col);
-                        else newBoard[row][col] = newBoard[row][col] = new State(Player.PLAYER1, 1, row, col);
-                    }
-                } else if (row > 10) {
-                    if (row === 14) {
-                        newBoard[row][col] = new State(Player.PLAYER2, 0, row, col);
-                    } else if (row === 13) {
-                        if (col === 6) newBoard[row][col] = new State(Player.PLAYER2, 8, row, col);
-                        else newBoard[row][col] = newBoard[row][col] = new State(Player.PLAYER2, 9, row, col);
-                    } else if (row === 12) {
-                        if (col === 5) newBoard[row][col] =newBoard[row][col] = new State(Player.PLAYER2, 7, row, col);
-                        else if (col === 7) newBoard[row][col] = newBoard[row][col] = new State(Player.PLAYER2, 6, row, col);
-                        else newBoard[row][col] = new State(Player.PLAYER2, 5, row, col);
-                    } else if (row === 11) {
-                        if (col === 4) newBoard[row][col] = new State(Player.PLAYER2, 1, row, col);
-                        else if (col === 6) newBoard[row][col] = new State(Player.PLAYER2, 2, row, col);
-                        else if (col === 8) newBoard[row][col] = new State(Player.PLAYER2, 3, row, col);
-                        else newBoard[row][col] = new State(Player.PLAYER2, 4, row, col);
-                    }
-                }
-            }
-        }
-
         if (selectedPiece) {
-            newBoard[selectedPiece.x][selectedPiece.y].clicked = true;
+            boardModel[selectedPiece.x][selectedPiece.y].clicked = true;
+            console.log(selectedPiece);
         }
-        setBoard(newBoard);
+
+        setBoard([...boardModel]);
 
     }, [selectedPiece]);
-    console.log(board);
+
+    const resetBoard = () => {
+        initializeBoard();
+        setBoard([...boardModel]);
+    }
 
     return (
         <div style={{ position: "relative", width: "100vw", height: "100vh", backgroundColor: background }}>
@@ -146,6 +258,9 @@ const ChineseCheckerBoard: React.FC = () => {
                     ))}
                 </div>
             ))}
+            <Button onClick={resetBoard}>
+                Restart
+            </Button>
         </div>
     );
 };

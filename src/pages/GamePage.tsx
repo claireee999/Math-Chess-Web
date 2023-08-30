@@ -23,6 +23,7 @@ const GamePage: React.FC = ({}) => {
     return (
         <div>
             <ChineseCheckerBoard />
+
         </div>
     );
 };
