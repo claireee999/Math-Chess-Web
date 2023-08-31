@@ -9,12 +9,12 @@ enum Player {
 }
 
 enum Direction {
-    UP,
-    DOWN,
-    UPLEFT,
-    UPRIGHT,
-    DOWNLEFT,
-    DOWNRIGHT
+    UP = 'UP',
+    DOWN = 'DOWN',
+    UPLEFT = 'UPLEFT',
+    UPRIGHT = 'UPRIGHT',
+    DOWNLEFT = 'DOWNLEFT',
+    DOWNRIGHT = 'DOWNRIGHT'
 }
 class Piece {
     // [1, 0-9]: Player1; [2, 0-9]: Player2; [-1, -1]: invalid; [0, -1]: empty
@@ -23,13 +23,15 @@ class Piece {
     x: number;
     y: number;
     clicked: boolean;
+    highlight: boolean;
 
-    constructor(player: Player, value: number, x: number, y: number, clicked = false) {
+    constructor(player: Player, value: number, x: number, y: number, clicked = false, highlight = false) {
         this.player = player;
         this.value = value;
         this.x = x;
         this.y = y;
         this.clicked = clicked;
+        this.highlight = highlight;
     }
 }
 const boardModel: Piece[][] = [...Array(15)].map(() => Array(15).fill(new Piece(Player.EMPTY, -1, -1, -1)));
@@ -86,16 +88,16 @@ const ChineseCheckerBoard: React.FC = () => {
     const background: string = "#FED7E2";
 
     const [selectedPiece, setSelectedPiece] = useState<{x: number, y: number}>();
+    const [highlightPiece, setHighlightPiece] = useState<{x: number, y: number}[]>([]);
 
      const findValidMoves = (x: number, y: number) => {
-         const validMoves = Array(6).fill({ x: -1, y: -1 });
-
+         const validMoves: {x: number, y: number}[] = []
           for (let i = y; i >=0; i--) {
               if (boardModel[x][i].player === Player.NONE){
                   break;
               }
               if (boardModel[x][i].player === Player.EMPTY){
-                  validMoves[Direction.UP] = {x, i};
+                  validMoves.push({x, y: i});
                   break;
               }
           }
@@ -105,7 +107,7 @@ const ChineseCheckerBoard: React.FC = () => {
                   break;
               }
               if (boardModel[x][i].player === Player.EMPTY){
-                  validMoves[Direction.DOWN] = {x,i};
+                  validMoves.push({x, y: i});
                   break;
               }
           }
@@ -115,7 +117,7 @@ const ChineseCheckerBoard: React.FC = () => {
                  break;
              }
              if (boardModel[x-1][i].player === Player.EMPTY){
-                 validMoves[Direction.UPLEFT] = {x: x-1, y: i};
+                 validMoves.push({x: x-1, y: i});
                  break;
              }
          }
@@ -125,20 +127,20 @@ const ChineseCheckerBoard: React.FC = () => {
                  break;
              }
              if (boardModel[x-1][i].player === Player.EMPTY){
-                 validMoves[Direction.DOWNLEFT] = {x: x-1, y: i};
+                 validMoves.push({x: x-1, y: i});
                  break;
              }
          }
 
          for (let i = y-1; i >=0; i--) {
-             console.log(x+1,i);
              if (x+1 >=15) break;
              if (boardModel[x+1][i].player === Player.NONE){
                  break;
              }
              if (boardModel[x+1][i].player === Player.EMPTY){
-                 validMoves[Direction.UPRIGHT] = {x: x+1, y: i};
-                 console.log(validMoves);
+                 console.log(x, y)
+                 console.log(x + 1, i)
+                 validMoves.push({x: x+1, y: i});
                  break;
              }
          }
@@ -149,24 +151,21 @@ const ChineseCheckerBoard: React.FC = () => {
                  break;
              }
              if (boardModel[x+1][i].player === Player.EMPTY){
-                 validMoves[Direction.DOWNRIGHT] = {x: x+1, y: i};
+                 validMoves.push({x: x+1, y: i});
                  break;
              }
          }
 
           return validMoves;
-          }
+     }
 
 
     const movePiece = (oldPiece: { x: number; y: number }, newX: number, newY: number) => {
         const movingPiece = boardModel[oldPiece.x][oldPiece.y];
-        const validMoves = findValidMoves(oldPiece.x, oldPiece.y);
-        console.log(validMoves);
         boardModel[newX][newY] = new Piece(movingPiece.player, movingPiece.value, newX, newY);
         boardModel[oldPiece.x][oldPiece.y] = new Piece(Player.EMPTY, -1, oldPiece.x, oldPiece.y);
         setSelectedPiece(undefined);
         setBoard([...boardModel]);
-        console.log( boardModel[newX][newY], boardModel[oldPiece.x][oldPiece.y]);
         //setMoveStack([...moveStack.slice(0, currentMove + 1), newBoard]);
         return true;
     }
@@ -183,10 +182,13 @@ const ChineseCheckerBoard: React.FC = () => {
             position: "absolute",
             top: `${y * 35 + 150}px`,
             left: `${x * 70 + 150}px`,
-            width: "50px",
-            height: "50px",
+            width: piece.highlight ? "45px" : "50px",
+            height: piece.highlight ? "45px" : "50px",
             lineHeight: "45px",
             borderRadius: "50%",
+            border: "solid #000",
+            borderWidth: piece.highlight ? "5px" : "0",
+            borderColor: "rgba(23,248,177,0.73)",
             backgroundColor: pieceStyles[piece.player],
             zIndex: piece.player === Player.NONE ? "-1" : "1",
             textAlign: "center",
@@ -216,12 +218,19 @@ const ChineseCheckerBoard: React.FC = () => {
             if (selectedPiece) {
                 boardModel[selectedPiece?.x][selectedPiece?.y].clicked = false;
             }
+            highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = false);
             if (selectedPiece?.x === x && selectedPiece?.y === y) {
                 setSelectedPiece(undefined);
+                setHighlightPiece([]);
             } else {
                 setSelectedPiece({x, y});
+                setHighlightPiece(findValidMoves(x, y));
             }
         };
+
+        if (piece.highlight) {
+            console.log(style)
+        }
 
         return (
             <div style={style} onClick={handleClick}>
@@ -235,12 +244,16 @@ const ChineseCheckerBoard: React.FC = () => {
         //const newBoard = [...Array(15)].map(() => Array(15).fill([0,-1]));
         if (selectedPiece) {
             boardModel[selectedPiece.x][selectedPiece.y].clicked = true;
-            console.log(selectedPiece);
         }
 
         setBoard([...boardModel]);
 
     }, [selectedPiece]);
+
+    useEffect(() => {
+        highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = true);
+        setBoard([...boardModel]);
+    }, [highlightPiece])
 
     const resetBoard = () => {
         initializeBoard();
