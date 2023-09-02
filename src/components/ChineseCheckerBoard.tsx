@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {Button, useBoolean} from "@chakra-ui/react";
+import { initialBoard } from './initialBoard';
 
 enum Player {
     EMPTY,
@@ -8,14 +9,6 @@ enum Player {
     NONE
 }
 
-enum Direction {
-    UP = 'UP',
-    DOWN = 'DOWN',
-    UPLEFT = 'UPLEFT',
-    UPRIGHT = 'UPRIGHT',
-    DOWNLEFT = 'DOWNLEFT',
-    DOWNRIGHT = 'DOWNRIGHT'
-}
 class Piece {
     // [1, 0-9]: Player1; [2, 0-9]: Player2; [-1, -1]: invalid; [0, -1]: empty
     player: Player;
@@ -25,7 +18,7 @@ class Piece {
     clicked: boolean;
     highlight: boolean;
 
-    constructor(player: Player, value: number, x: number, y: number, clicked = false, highlight = false) {
+    constructor(player: Player = Player.NONE, value: number, x: number, y: number, clicked = false, highlight = false) {
         this.player = player;
         this.value = value;
         this.x = x;
@@ -34,53 +27,25 @@ class Piece {
         this.highlight = highlight;
     }
 }
+
 const boardModel: Piece[][] = [...Array(15)].map(() => Array(15).fill(new Piece(Player.EMPTY, -1, -1, -1)));
 const initializeBoard = () => {
-    for (let row = 0; row < 15; row++) {
-        for (let col = 0; col < 15; col++) {
-            if ((row + col) % 2 === 0 || Math.abs(row - 7) + Math.abs(col - 7) > 7) {
-                boardModel[row][col] = new Piece(Player.NONE, -1, row, col);
-            } else if (row < 4) {
-                if (row === 0) {
-                    boardModel[row][col] = new Piece(Player.PLAYER1, 0, row, col);
-                } else if (row === 1) {
-                    if (col === 6) boardModel[row][col] = new Piece(Player.PLAYER1, 9, row, col);
-                    else boardModel[row][col] = new Piece(Player.PLAYER1, 8, row, col);
-                } else if (row === 2) {
-                    if (col === 5) boardModel[row][col] = new Piece(Player.PLAYER1, 5, row, col);
-                    else if (col === 7) boardModel[row][col] = new Piece(Player.PLAYER1, 6, row, col);
-                    else boardModel[row][col] = new Piece(Player.PLAYER1, 7, row, col);
-                } else if (row === 3) {
-                    if (col === 4) boardModel[row][col] = new Piece(Player.PLAYER1, 4, row, col);
-                    else if (col === 6) boardModel[row][col] = new Piece(Player.PLAYER1, 3, row, col);
-                    else if (col === 8) boardModel[row][col] = new Piece(Player.PLAYER1, 2, row, col);
-                    else boardModel[row][col] = new Piece(Player.PLAYER1, 1, row, col);
-                }
-            } else if (row > 10) {
-                if (row === 14) {
-                    boardModel[row][col] = new Piece(Player.PLAYER2, 0, row, col);
-                } else if (row === 13) {
-                    if (col === 6) boardModel[row][col] = new Piece(Player.PLAYER2, 8, row, col);
-                    else boardModel[row][col] = new Piece(Player.PLAYER2, 9, row, col);
-                } else if (row === 12) {
-                    if (col === 5) boardModel[row][col] = new Piece(Player.PLAYER2, 7, row, col);
-                    else if (col === 7) boardModel[row][col] = new Piece(Player.PLAYER2, 6, row, col);
-                    else boardModel[row][col] = new Piece(Player.PLAYER2, 5, row, col);
-                } else if (row === 11) {
-                    if (col === 4) boardModel[row][col] = new Piece(Player.PLAYER2, 1, row, col);
-                    else if (col === 6) boardModel[row][col] = new Piece(Player.PLAYER2, 2, row, col);
-                    else if (col === 8) boardModel[row][col] = new Piece(Player.PLAYER2, 3, row, col);
-                    else boardModel[row][col] = new Piece(Player.PLAYER2, 4, row, col);
-                }
-            } else  boardModel[row][col] = new Piece(Player.EMPTY, -1, row, col);
+    for (let i = 0; i < 15; i++) {
+        for (let j = 0; j < 15; j++) {
+            boardModel[i][j] = initialBoard[i][j];
         }
     }
+    console.log(initialBoard)
+    console.log(boardModel);
 }
+
+const turnHistory: { oldX: number; oldY: number; newX: number; newY: number; }[] = [];
+const boardHistory = [];
 
 const ChineseCheckerBoard: React.FC = () => {
     const [board, setBoard] = useState<Piece[][]>(boardModel);
-    console.log(board);
-    const [boardHistory, setBoardHistory] = useState([]);
+    const [turn, setTurn] = useState<Player>(Player.PLAYER1);
+    const [hasMoved, setHasMoved] = useState(false);
 
     const player1: string[] = ["#FBB6CE", "#F687B3"];
     const player2: string[] = ["#BEE3F8", "#90CDF4"];
@@ -91,67 +56,82 @@ const ChineseCheckerBoard: React.FC = () => {
     const [highlightPiece, setHighlightPiece] = useState<{x: number, y: number}[]>([]);
 
      const findValidMoves = (x: number, y: number) => {
-         const validMoves: {x: number, y: number}[] = []
-          for (let i = y; i >=0; i--) {
-              if (boardModel[x][i].player === Player.NONE){
-                  break;
+          const validMoves: {x: number, y: number}[] = [];
+          let isJumpEnabled = false;
+          for (let i = 1; y - i >= 0; i++) {
+              if (boardModel[x][y - i].player === Player.PLAYER1 || boardModel[x][y - i].player === Player.PLAYER2) {
+                  isJumpEnabled = true;
               }
-              if (boardModel[x][i].player === Player.EMPTY){
-                  validMoves.push({x, y: i});
-                  break;
-              }
-          }
-
-          for (let i = y; i <=15; i++){
-              if (boardModel[x][i].player === Player.NONE){
-                  break;
-              }
-              if (boardModel[x][i].player === Player.EMPTY){
-                  validMoves.push({x, y: i});
+              if (boardModel[x][y - i].player === Player.EMPTY){
+                  if (isJumpEnabled) {
+                      validMoves.push({x, y: y - i});
+                  }
                   break;
               }
           }
 
-         for (let i = y-1; i >=0; i--) {
-             if (boardModel[x-1][i].player === Player.NONE){
-                 break;
+          isJumpEnabled = false;
+          for (let i = 1; y + i < 15; i++){
+              if (boardModel[x][y + i].player === Player.PLAYER1 || boardModel[x][y + i].player === Player.PLAYER2) {
+                  isJumpEnabled = true;
+              }
+              if (boardModel[x][y + i].player === Player.EMPTY){
+                  if (isJumpEnabled) {
+                      validMoves.push({x, y: y + i});
+                  }
+                  break;
+              }
+          }
+
+         isJumpEnabled = false;
+         for (let i = 1; x + i < 15 && y - i >= 0; i++) {
+             if (boardModel[x + i][y - i].player === Player.PLAYER1 || boardModel[x + i][y - i].player === Player.PLAYER2) {
+                 isJumpEnabled = true;
              }
-             if (boardModel[x-1][i].player === Player.EMPTY){
-                 validMoves.push({x: x-1, y: i});
+             if (boardModel[x + i][y - i].player === Player.EMPTY) {
+                 if (isJumpEnabled) {
+                     validMoves.push({x: x + i, y: y - i});
+                 }
                  break;
              }
          }
 
-         for (let i = y+1; i <=15; i++){
-             if (boardModel[x-1][i].player === Player.NONE){
-                 break;
+         isJumpEnabled = false;
+         for (let i = 1; x + i < 15 && y + i < 15; i++){
+             if (boardModel[x + i][y + i].player === Player.PLAYER1 || boardModel[x + i][y + i].player === Player.PLAYER2) {
+                 isJumpEnabled = true;
              }
-             if (boardModel[x-1][i].player === Player.EMPTY){
-                 validMoves.push({x: x-1, y: i});
+             if (boardModel[x + i][y + i].player === Player.EMPTY) {
+                 if (isJumpEnabled) {
+                     validMoves.push({x: x + i, y: y + i});
+                 }
                  break;
              }
          }
 
-         for (let i = y-1; i >=0; i--) {
+         isJumpEnabled = false;
+         for (let i = 1; x - i >= 0 && y - i >= 0; i++) {
+             if (boardModel[x - i][y - i].player === Player.PLAYER1 || boardModel[x - i][y - i].player === Player.PLAYER2) {
+                 isJumpEnabled = true;
+             }
+             if (boardModel[x - i][y - i].player === Player.EMPTY){
+                 if (isJumpEnabled) {
+                     validMoves.push({x: x - i, y: y - i});
+                 }
+                 break;
+             }
+         }
+
+         isJumpEnabled = false;
+         for (let i = 1; x - i >= 0 && y + i < 15; i++){
              if (x+1 >=15) break;
-             if (boardModel[x+1][i].player === Player.NONE){
-                 break;
+             if (boardModel[x - i][y + i].player === Player.PLAYER1 || boardModel[x - i][y + i].player === Player.PLAYER2) {
+                 isJumpEnabled = true;
              }
-             if (boardModel[x+1][i].player === Player.EMPTY){
-                 console.log(x, y)
-                 console.log(x + 1, i)
-                 validMoves.push({x: x+1, y: i});
-                 break;
-             }
-         }
-
-         for (let i = y+1; i <=15; i++){
-             if (x+1 >=15) break;
-             if (boardModel[x+1][i].player === Player.NONE){
-                 break;
-             }
-             if (boardModel[x+1][i].player === Player.EMPTY){
-                 validMoves.push({x: x+1, y: i});
+             if (boardModel[x - i][y + i].player === Player.EMPTY){
+                 if (isJumpEnabled) {
+                     validMoves.push({x: x - i, y: y + i});
+                 }
                  break;
              }
          }
@@ -162,10 +142,13 @@ const ChineseCheckerBoard: React.FC = () => {
 
     const movePiece = (oldPiece: { x: number; y: number }, newX: number, newY: number) => {
         const movingPiece = boardModel[oldPiece.x][oldPiece.y];
-        boardModel[newX][newY] = new Piece(movingPiece.player, movingPiece.value, newX, newY);
+        boardModel[newX][newY] = new Piece(movingPiece.player, movingPiece.value, newX, newY, true);
         boardModel[oldPiece.x][oldPiece.y] = new Piece(Player.EMPTY, -1, oldPiece.x, oldPiece.y);
-        setSelectedPiece(undefined);
-        setBoard([...boardModel]);
+        turnHistory.push({oldX: oldPiece.x, oldY: oldPiece.y, newX, newY});
+        setSelectedPiece({x: newX, y: newY})
+        setHighlightPiece(findValidMoves(newX, newY));
+        setHasMoved(true);
+        //setBoard([...boardModel]);
         //setMoveStack([...moveStack.slice(0, currentMove + 1), newBoard]);
         return true;
     }
@@ -205,32 +188,29 @@ const ChineseCheckerBoard: React.FC = () => {
             if (piece.player === Player.NONE) {
                 return
             }
+            highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = false);
             if (piece.player === Player.EMPTY) {
-                if (selectedPiece){
-                   if (true){
-                       movePiece(selectedPiece, x, y);
-                       //change player
-
-                   }
+                if (selectedPiece && highlightPiece.some(piece => piece.x === x && piece.y === y)){
+                    movePiece(selectedPiece, x, y);
                 }
+                return
+            }
+            if (hasMoved) {
                 return
             }
             if (selectedPiece) {
                 boardModel[selectedPiece?.x][selectedPiece?.y].clicked = false;
             }
-            highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = false);
             if (selectedPiece?.x === x && selectedPiece?.y === y) {
                 setSelectedPiece(undefined);
                 setHighlightPiece([]);
             } else {
-                setSelectedPiece({x, y});
-                setHighlightPiece(findValidMoves(x, y));
+                if (piece.player === turn) {
+                    setSelectedPiece({x, y});
+                    setHighlightPiece(findValidMoves(x, y));
+                }
             }
         };
-
-        if (piece.highlight) {
-            console.log(style)
-        }
 
         return (
             <div style={style} onClick={handleClick}>
@@ -255,8 +235,47 @@ const ChineseCheckerBoard: React.FC = () => {
         setBoard([...boardModel]);
     }, [highlightPiece])
 
+    useEffect(() => {
+        initializeBoard();
+        setBoard([...boardModel])
+    }, [])
+
     const resetBoard = () => {
         initializeBoard();
+        setBoard([...boardModel]);
+    }
+
+    const switchTurn = () => {
+        if (turnHistory.length > 0) {
+            boardHistory.push({oldX: turnHistory[0].oldX, oldY: turnHistory[0].oldY, newX: turnHistory[turnHistory.length - 1].newX, newY: turnHistory[turnHistory.length - 1].newY})
+        }
+        if (turn === Player.PLAYER1) {
+            setTurn(Player.PLAYER2)
+        } else {
+            setTurn(Player.PLAYER1)
+        }
+        setHasMoved(false);
+        if (selectedPiece) {
+            boardModel[selectedPiece?.x][selectedPiece?.y].clicked = false;
+        }
+        highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = false);
+        setBoard([...boardModel]);
+    }
+
+    const restartTurn = () => {
+        if (turnHistory.length > 0) {
+            const movingPiece = boardModel[turnHistory[turnHistory.length - 1].newX][turnHistory[turnHistory.length - 1].newY];
+            boardModel[turnHistory[turnHistory.length - 1].newX][turnHistory[turnHistory.length - 1].newY] = new Piece(Player.EMPTY, -1, turnHistory[turnHistory.length - 1].newX, turnHistory[turnHistory.length - 1].newY);
+            boardModel[turnHistory[0].oldX][turnHistory[0].oldY] = new Piece(movingPiece.player, movingPiece.value, turnHistory[0].oldX, turnHistory[0].oldY);
+        }
+        turnHistory.length = 0;
+        if (selectedPiece) {
+            boardModel[selectedPiece?.x][selectedPiece?.y].clicked = false;
+        }
+        setSelectedPiece(undefined);
+        highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = false);
+        setHighlightPiece([]);
+        setHasMoved(false);
         setBoard([...boardModel]);
     }
 
@@ -273,6 +292,12 @@ const ChineseCheckerBoard: React.FC = () => {
             ))}
             <Button onClick={resetBoard}>
                 Restart
+            </Button>
+            <Button onClick={switchTurn}>
+                Next
+            </Button>
+            <Button onClick={restartTurn}>
+                Reset
             </Button>
         </div>
     );
