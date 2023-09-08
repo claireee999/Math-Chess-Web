@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, ButtonGroup } from '@chakra-ui/react';
 import { Heading } from '@chakra-ui/react';
-import ChineseCheckerBoard from "../components/ChineseCheckerBoard";
+import MathChessBoard from "../components/MathChessBoard";
 
 type HomePageProps = {
     onStartGame: () => void;
@@ -22,8 +22,7 @@ const GamePage: React.FC = ({}) => {
 
     return (
         <div>
-            <ChineseCheckerBoard />
-
+            <MathChessBoard />
         </div>
     );
 };

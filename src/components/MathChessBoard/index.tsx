@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {Button, useBoolean} from "@chakra-ui/react";
 import { initialBoard } from './initialBoard';
+import Modal from '../Modal';
 
 enum Player {
     EMPTY,
@@ -29,20 +30,11 @@ class Piece {
 }
 
 const boardModel: Piece[][] = [...Array(15)].map(() => Array(15).fill(new Piece(Player.EMPTY, -1, -1, -1)));
-const initializeBoard = () => {
-    for (let i = 0; i < 15; i++) {
-        for (let j = 0; j < 15; j++) {
-            boardModel[i][j] = initialBoard[i][j];
-        }
-    }
-    console.log(initialBoard)
-    console.log(boardModel);
-}
 
 const turnHistory: { oldX: number; oldY: number; newX: number; newY: number; }[] = [];
 const boardHistory = [];
 
-const ChineseCheckerBoard: React.FC = () => {
+const MathChessBoard: React.FC = () => {
     const [board, setBoard] = useState<Piece[][]>(boardModel);
     const [turn, setTurn] = useState<Player>(Player.PLAYER1);
     const [hasMoved, setHasMoved] = useState(false);
@@ -55,98 +47,140 @@ const ChineseCheckerBoard: React.FC = () => {
     const [selectedPiece, setSelectedPiece] = useState<{x: number, y: number}>();
     const [highlightPiece, setHighlightPiece] = useState<{x: number, y: number}[]>([]);
 
+    const [showModal, setShowModal] = useState(false);
+    const numbers = [1,2,3];
+    const handleShowModal = () => {
+        setShowModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+    };
+
+
+    const initializeBoard = () => {
+        for (let row = 0; row < 15; row++) {
+            for (let col = 0; col < 15; col++) {
+                boardModel[row][col] = {...initialBoard[row][col]};
+            }
+        }
+    }
+
      const findValidMoves = (x: number, y: number) => {
           const validMoves: {x: number, y: number}[] = [];
-          let isJumpEnabled = false;
+
           for (let i = 1; y - i >= 0; i++) {
-              if (boardModel[x][y - i].player === Player.PLAYER1 || boardModel[x][y - i].player === Player.PLAYER2) {
-                  isJumpEnabled = true;
-              }
-              if (boardModel[x][y - i].player === Player.EMPTY){
-                  if (isJumpEnabled) {
-                      validMoves.push({x, y: y - i});
-                  }
-                  break;
+              if (boardModel[x][y - i].player === Player.EMPTY &&
+                  (boardModel[x][y - i + 2].player === Player.PLAYER1 || boardModel[x][y - i + 2].player === Player.PLAYER2)){
+                  validMoves.push({x, y: y - i});
               }
           }
 
-          isJumpEnabled = false;
           for (let i = 1; y + i < 15; i++){
-              if (boardModel[x][y + i].player === Player.PLAYER1 || boardModel[x][y + i].player === Player.PLAYER2) {
-                  isJumpEnabled = true;
-              }
-              if (boardModel[x][y + i].player === Player.EMPTY){
-                  if (isJumpEnabled) {
-                      validMoves.push({x, y: y + i});
-                  }
-                  break;
+              if (boardModel[x][y + i].player === Player.EMPTY &&
+                  (boardModel[x][y + i - 2].player === Player.PLAYER1 || boardModel[x][y + i - 2].player === Player.PLAYER2)){
+                  validMoves.push({x, y: y + i});
               }
           }
 
-         isJumpEnabled = false;
+
          for (let i = 1; x + i < 15 && y - i >= 0; i++) {
-             if (boardModel[x + i][y - i].player === Player.PLAYER1 || boardModel[x + i][y - i].player === Player.PLAYER2) {
-                 isJumpEnabled = true;
-             }
-             if (boardModel[x + i][y - i].player === Player.EMPTY) {
-                 if (isJumpEnabled) {
-                     validMoves.push({x: x + i, y: y - i});
-                 }
-                 break;
+             if (boardModel[x + i][y - i].player === Player.EMPTY &&
+                 (boardModel[x + i - 1][y - i + 1].player === Player.PLAYER1 || boardModel[x + i -1][y - i + 1].player === Player.PLAYER2)){
+                 validMoves.push({x: x + i, y: y - i});
              }
          }
 
-         isJumpEnabled = false;
          for (let i = 1; x + i < 15 && y + i < 15; i++){
-             if (boardModel[x + i][y + i].player === Player.PLAYER1 || boardModel[x + i][y + i].player === Player.PLAYER2) {
-                 isJumpEnabled = true;
-             }
-             if (boardModel[x + i][y + i].player === Player.EMPTY) {
-                 if (isJumpEnabled) {
-                     validMoves.push({x: x + i, y: y + i});
-                 }
-                 break;
+             if (boardModel[x + i][y + i].player === Player.EMPTY &&
+                 (boardModel[x + i - 1][y + i - 1].player === Player.PLAYER1 || boardModel[x + i -1][y + i - 1].player === Player.PLAYER2)){
+                 validMoves.push({x: x + i, y: y + i});
              }
          }
 
-         isJumpEnabled = false;
          for (let i = 1; x - i >= 0 && y - i >= 0; i++) {
-             if (boardModel[x - i][y - i].player === Player.PLAYER1 || boardModel[x - i][y - i].player === Player.PLAYER2) {
-                 isJumpEnabled = true;
-             }
-             if (boardModel[x - i][y - i].player === Player.EMPTY){
-                 if (isJumpEnabled) {
-                     validMoves.push({x: x - i, y: y - i});
-                 }
-                 break;
+             if (boardModel[x - i][y - i].player === Player.EMPTY &&
+                 (boardModel[x - i + 1][y - i + 1].player === Player.PLAYER1 || boardModel[x - i + 1][y - i + 1].player === Player.PLAYER2)){
+                 validMoves.push({x: x - i, y: y - i});
              }
          }
 
-         isJumpEnabled = false;
          for (let i = 1; x - i >= 0 && y + i < 15; i++){
-             if (x+1 >=15) break;
-             if (boardModel[x - i][y + i].player === Player.PLAYER1 || boardModel[x - i][y + i].player === Player.PLAYER2) {
-                 isJumpEnabled = true;
-             }
-             if (boardModel[x - i][y + i].player === Player.EMPTY){
-                 if (isJumpEnabled) {
-                     validMoves.push({x: x - i, y: y + i});
-                 }
-                 break;
+             if (x+1 > 15) break;
+             if (boardModel[x - i][y + i].player === Player.EMPTY &&
+                 (boardModel[x - i + 1][y + i - 1].player === Player.PLAYER1 || boardModel[x - i + 1][y + i - 1].player === Player.PLAYER2)){
+                 validMoves.push({x: x - i, y: y + i});
              }
          }
 
           return validMoves;
      }
 
+     const findValidConseqJumpMoves= (x: number, y: number) => {
+         const validMoves: {x: number, y: number}[] = [];
+         for (let i = 3; y - i >= 0; i++) {
+             if (boardModel[x][y - i].player === Player.EMPTY &&
+                 (boardModel[x][y - i + 2].player === Player.PLAYER1 || boardModel[x][y - i + 2].player === Player.PLAYER2)){
+                 validMoves.push({x, y: y - i});
+             }
+         }
+
+         for (let i = 3; y + i < 15; i++){
+             if (boardModel[x][y + i].player === Player.EMPTY &&
+                 (boardModel[x][y + i - 2].player === Player.PLAYER1 || boardModel[x][y + i - 2].player === Player.PLAYER2)){
+                 validMoves.push({x, y: y + i});
+             }
+         }
+
+
+         for (let i = 2; x + i < 15 && y - i >= 0; i++) {
+             if (boardModel[x + i][y - i].player === Player.EMPTY &&
+                 (boardModel[x + i - 1][y - i + 1].player === Player.PLAYER1 || boardModel[x + i - 1][y - i + 1].player === Player.PLAYER2)){
+                 validMoves.push({x: x + i, y: y - i});
+             }
+         }
+
+         for (let i = 2; x + i < 15 && y + i < 15; i++){
+             if (boardModel[x + i][y + i].player === Player.EMPTY &&
+                 (boardModel[x + i - 1][y + i - 1].player === Player.PLAYER1 || boardModel[x + i - 1][y + i - 1].player === Player.PLAYER2)){
+                 validMoves.push({x: x + i, y: y + i});
+             }
+         }
+
+         for (let i = 2; x - i >= 0 && y - i >= 0; i++) {
+             if (boardModel[x - i][y - i].player === Player.EMPTY &&
+                 (boardModel[x - i + 1][y - i + 1].player === Player.PLAYER1 || boardModel[x - i + 1][y - i + 1].player === Player.PLAYER2)){
+                 validMoves.push({x: x - i, y: y - i});
+             }
+         }
+
+         for (let i = 2; x - i >= 0 && y + i < 15; i++){
+             if (x + 1 > 15) break;
+             if (boardModel[x - i][y + i].player === Player.EMPTY &&
+                 (boardModel[x - i + 1][y + i - 1].player === Player.PLAYER1 || boardModel[x - i + 1][y + i - 1].player === Player.PLAYER2)){
+                 validMoves.push({x: x - i, y: y + i});
+             }
+         }
+
+         return validMoves;
+     }
+
+     const nextToEachOther = (x1: number, y1: number, x2: number, y2: number) => {
+         if (x1 === x2 && Math.abs(y1 - y2) === 2) return true;
+         if (Math.abs(y1 - y2) === 1 && Math.abs (x1 - x2) === 1) return true;
+         return false;
+    }
 
     const movePiece = (oldPiece: { x: number; y: number }, newX: number, newY: number) => {
         const movingPiece = boardModel[oldPiece.x][oldPiece.y];
         boardModel[newX][newY] = new Piece(movingPiece.player, movingPiece.value, newX, newY, true);
         boardModel[oldPiece.x][oldPiece.y] = new Piece(Player.EMPTY, -1, oldPiece.x, oldPiece.y);
         turnHistory.push({oldX: oldPiece.x, oldY: oldPiece.y, newX, newY});
-        setSelectedPiece({x: newX, y: newY})
-        setHighlightPiece(findValidMoves(newX, newY));
+        setSelectedPiece({x: newX, y: newY});
+        if (!nextToEachOther(oldPiece.x, oldPiece.y, newX, newY)) {
+            setHighlightPiece(findValidConseqJumpMoves(newX, newY));
+        }
+        // console.log(findValidMoves(newX,newY));
         setHasMoved(true);
         //setBoard([...boardModel]);
         //setMoveStack([...moveStack.slice(0, currentMove + 1), newBoard]);
@@ -242,6 +276,9 @@ const ChineseCheckerBoard: React.FC = () => {
 
     const resetBoard = () => {
         initializeBoard();
+        setHighlightPiece([]);
+        setSelectedPiece(undefined);
+        setHasMoved(false);
         setBoard([...boardModel]);
     }
 
@@ -249,6 +286,8 @@ const ChineseCheckerBoard: React.FC = () => {
         if (turnHistory.length > 0) {
             boardHistory.push({oldX: turnHistory[0].oldX, oldY: turnHistory[0].oldY, newX: turnHistory[turnHistory.length - 1].newX, newY: turnHistory[turnHistory.length - 1].newY})
         }
+
+        handleShowModal();
         if (turn === Player.PLAYER1) {
             setTurn(Player.PLAYER2)
         } else {
@@ -257,9 +296,14 @@ const ChineseCheckerBoard: React.FC = () => {
         setHasMoved(false);
         if (selectedPiece) {
             boardModel[selectedPiece?.x][selectedPiece?.y].clicked = false;
+            setSelectedPiece(undefined);
         }
         highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = false);
         setBoard([...boardModel]);
+    }
+
+    const submitCalculation = () => {
+
     }
 
     const restartTurn = () => {
@@ -280,6 +324,7 @@ const ChineseCheckerBoard: React.FC = () => {
     }
 
     return (
+        <div>
         <div style={{ position: "relative", width: "100vw", height: "100vh", backgroundColor: background }}>
             {board.map((row, rowIndex) => (
                 <div key={rowIndex} style={{ display: 'flex' }}>
@@ -300,7 +345,9 @@ const ChineseCheckerBoard: React.FC = () => {
                 Reset
             </Button>
         </div>
+            <Modal isOpen={showModal} onClose={handleCloseModal} numbers={numbers} />
+        </div>
     );
 };
 
-export default ChineseCheckerBoard;
+export default MathChessBoard;
