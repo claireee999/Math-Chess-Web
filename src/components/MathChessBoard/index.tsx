@@ -29,6 +29,11 @@ class Piece {
     }
 }
 
+enum Mode{
+    Practice,
+    Contest
+}
+
 const boardModel: Piece[][] = [...Array(15)].map(() => Array(15).fill(new Piece(Player.EMPTY, -1, -1, -1)));
 
 const turnHistory: { oldX: number; oldY: number; newX: number; newY: number; }[] = [];
@@ -48,13 +53,20 @@ const MathChessBoard: React.FC = () => {
     const [highlightPiece, setHighlightPiece] = useState<{x: number, y: number}[]>([]);
 
     const [showModal, setShowModal] = useState(false);
-    const numbers = [1,2,3];
+    const [numbersPassedBy, setNumbersPassedBy] = useState<number[]>([]);
+    //const numbersPassedBy : number[] = [];
+
     const handleShowModal = () => {
         setShowModal(true);
     };
 
-    const handleCloseModal = () => {
+    const handleCloseModal = (shouldSwitch: boolean) => {
         setShowModal(false);
+        if (shouldSwitch) {
+            switchTurn();
+        } else {
+            cancelMove();
+        }
     };
 
 
@@ -171,20 +183,56 @@ const MathChessBoard: React.FC = () => {
          return false;
     }
 
+    const findNumbersPassedBy = (x1: number, y1: number, x2: number, y2: number) => {
+        const numbers : number[] = [];
+        if (x1 === x2) {
+            const step = y1 < y2 ? 1 : -1;
+            for (let y = y1; y !== y2; y += step * 2) {
+                if (boardModel[x1][y].player !== Player.EMPTY && boardModel[x1][y].player !== Player.NONE) {
+                    numbers.push(boardModel[x1][y].value);
+
+                }
+            }
+        } else {
+            const stepX = x1 < x2 ? 1 : -1;
+            const stepY = y1 < y2 ? 1 : -1;
+            for (let i = 0; i < Math.abs(x1 - x2); i++) {
+                if (boardModel[x1 + i * stepX][y1 + i * stepY].player !== Player.EMPTY ){
+                    //&& boardModel[x1 + i * stepX][y1 + i * stepY].player !== Player.NONE) {
+                    numbers.push(boardModel[x1 + i * stepX][y1 + i * stepY].value);
+                }
+            }
+        }
+        return numbers;
+    }
+
     const movePiece = (oldPiece: { x: number; y: number }, newX: number, newY: number) => {
         const movingPiece = boardModel[oldPiece.x][oldPiece.y];
         boardModel[newX][newY] = new Piece(movingPiece.player, movingPiece.value, newX, newY, true);
         boardModel[oldPiece.x][oldPiece.y] = new Piece(Player.EMPTY, -1, oldPiece.x, oldPiece.y);
         turnHistory.push({oldX: oldPiece.x, oldY: oldPiece.y, newX, newY});
         setSelectedPiece({x: newX, y: newY});
+        //setNumbersPassedBy([]);
         if (!nextToEachOther(oldPiece.x, oldPiece.y, newX, newY)) {
             setHighlightPiece(findValidConseqJumpMoves(newX, newY));
+            setNumbersPassedBy(findNumbersPassedBy(oldPiece.x, oldPiece.y, newX, newY));
+            //console.log(numbersPassedBy);
+        } else {
+            setNumbersPassedBy([]);
         }
         // console.log(findValidMoves(newX,newY));
         setHasMoved(true);
-        //setBoard([...boardModel]);
-        //setMoveStack([...moveStack.slice(0, currentMove + 1), newBoard]);
         return true;
+    }
+
+    const cancelMove = () => {
+            const move: { oldX: number; oldY: number; newX: number; newY: number; }|undefined = turnHistory.pop();
+            if (move === undefined) return;
+            const movingPiece = boardModel[move.newX][move.newY];
+            boardModel[move.oldX][move.oldY] = new Piece(movingPiece.player, movingPiece.value, move.oldX, move.oldY, false);
+            boardModel[move.newX][move.newY] = new Piece(Player.EMPTY, -1, move.newX, move.newY);
+            setSelectedPiece(undefined);
+            setHasMoved(false);
     }
 
     const drawPiece = (x: number, y: number, piece: Piece) => {
@@ -255,7 +303,6 @@ const MathChessBoard: React.FC = () => {
     };
 
     useEffect(() => {
-        //const newBoard = [...Array(15)].map(() => Array(15).fill([0,-1]));
         if (selectedPiece) {
             boardModel[selectedPiece.x][selectedPiece.y].clicked = true;
         }
@@ -287,7 +334,6 @@ const MathChessBoard: React.FC = () => {
             boardHistory.push({oldX: turnHistory[0].oldX, oldY: turnHistory[0].oldY, newX: turnHistory[turnHistory.length - 1].newX, newY: turnHistory[turnHistory.length - 1].newY})
         }
 
-        handleShowModal();
         if (turn === Player.PLAYER1) {
             setTurn(Player.PLAYER2)
         } else {
@@ -300,10 +346,6 @@ const MathChessBoard: React.FC = () => {
         }
         highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = false);
         setBoard([...boardModel]);
-    }
-
-    const submitCalculation = () => {
-
     }
 
     const restartTurn = () => {
@@ -323,6 +365,7 @@ const MathChessBoard: React.FC = () => {
         setBoard([...boardModel]);
     }
 
+
     return (
         <div>
         <div style={{ position: "relative", width: "100vw", height: "100vh", backgroundColor: background }}>
@@ -338,15 +381,17 @@ const MathChessBoard: React.FC = () => {
             <Button onClick={resetBoard}>
                 Restart
             </Button>
-            <Button onClick={switchTurn}>
+            <Button onClick={numbersPassedBy.length > 1 ? handleShowModal : switchTurn}>
                 Next
             </Button>
             <Button onClick={restartTurn}>
                 Reset
             </Button>
+            <label>Player {turn.toString()}</label>
         </div>
-            <Modal isOpen={showModal} onClose={handleCloseModal} numbers={numbers} />
+            {selectedPiece && <Modal isOpen={showModal} onClose={handleCloseModal} numbers={numbersPassedBy} goal={board[selectedPiece?.x][selectedPiece?.y].value} />}
         </div>
+
     );
 };
 

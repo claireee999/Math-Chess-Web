@@ -3,16 +3,18 @@ import "./style.css"
 
 interface ModalProps {
     isOpen: boolean;
-    onClose: () => void;
+    onClose: (shouldSwitch: boolean) => void;
     numbers: number[];
+    goal: number;
 
 }
 
-const Modal: FC<ModalProps> = ({ isOpen, onClose, numbers}) => {
+const Modal: FC<ModalProps> = ({ isOpen, onClose, numbers, goal}) => {
     const [contents, setContents] =  useState<string[]>([]);
     const initialUsedNumbers = Array.from({ length: numbers.length }, () => false);
     const [usedNumbers, setUsedNumbers] = useState<boolean[]>(initialUsedNumbers);
     const signs = ["+", "-", "\u00d7","\u00f7", "(", ")"];
+    const [errorMessage, setErrorMessage] = useState<boolean>(false);
 
 
     const handleClickSign = ( sign: string ) => {
@@ -43,6 +45,23 @@ const Modal: FC<ModalProps> = ({ isOpen, onClose, numbers}) => {
         setContents((prevContent) => prevContent.slice(0, -1));
     }
 
+    const handleSumbit = () => {
+        const expression = contents.join('').replace('\u00d7', '*').replace(/\u00f7/g, '/');
+        const result = eval(expression);
+        console.log(result);
+        if (result === goal) {
+            onClose(true)
+        } else {
+            handleClear();
+            setErrorMessage(true);
+        }
+
+    }
+
+    if (!isOpen) {
+        return null;
+    }
+
 
     return (
         <div className="modal">
@@ -61,6 +80,11 @@ const Modal: FC<ModalProps> = ({ isOpen, onClose, numbers}) => {
                         </button>
                     ))}
                 </div>
+                <div className="modal-errorMessage">
+                    {errorMessage &&
+                        <p>Wrong calculation. Please try again.</p> }
+                </div>
+
                 < div className="numbers">
                     {numbers.map((number, index) => (
                         !usedNumbers[index] && (
@@ -78,10 +102,10 @@ const Modal: FC<ModalProps> = ({ isOpen, onClose, numbers}) => {
                     delete
                 </button>
 
-                <button className="modal-close" onClick={onClose}>
+                <button className="modal-close" onClick={() => onClose(false)}>
                     Cancel
                 </button>
-                <button className="modal-submit" onClick={onClose}>
+                <button className="modal-submit" onClick={handleSumbit}>
                     Sumbit
                 </button>
 
