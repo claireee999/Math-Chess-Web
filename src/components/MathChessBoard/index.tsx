@@ -11,7 +11,6 @@ enum Player {
 }
 
 class Piece {
-    // [1, 0-9]: Player1; [2, 0-9]: Player2; [-1, -1]: invalid; [0, -1]: empty
     player: Player;
     value: number;
     x: number;
@@ -55,7 +54,12 @@ const MathChessBoard: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
     const [numbersPassedBy, setNumbersPassedBy] = useState<number[]>([]);
     //const numbersPassedBy : number[] = [];
+    const [conseqJumpCount, setConseqJumpCount] = useState(0);
+    const [conseqJumpNumbers, setConseqJumpNumbers] = useState<number[][]>([]);
 
+    const [errorMessage, setErrorMessage] = useState<boolean>(false);
+
+    //const conseqJumpNumbers : number[][] = [];
     const handleShowModal = () => {
         setShowModal(true);
     };
@@ -130,17 +134,27 @@ const MathChessBoard: React.FC = () => {
 
      const findValidConseqJumpMoves= (x: number, y: number) => {
          const validMoves: {x: number, y: number}[] = [];
+         const pastPositions:{x: number, y: number}[] = [];
+
+         for (let i = 0; i < turnHistory.length; i++){
+             pastPositions.push({x: turnHistory[i].oldX, y: turnHistory[i].oldY});
+         }
+
          for (let i = 3; y - i >= 0; i++) {
              if (boardModel[x][y - i].player === Player.EMPTY &&
                  (boardModel[x][y - i + 2].player === Player.PLAYER1 || boardModel[x][y - i + 2].player === Player.PLAYER2)){
-                 validMoves.push({x, y: y - i});
+                 if (!pastPositions.some(pos => pos.x === x && pos.y === y-i)){
+                     validMoves.push({x, y: y - i});
+                 }
              }
          }
 
          for (let i = 3; y + i < 15; i++){
              if (boardModel[x][y + i].player === Player.EMPTY &&
                  (boardModel[x][y + i - 2].player === Player.PLAYER1 || boardModel[x][y + i - 2].player === Player.PLAYER2)){
-                 validMoves.push({x, y: y + i});
+                 if (!pastPositions.some(pos => pos.x === x && pos.y === y + i)) {
+                     validMoves.push({x, y: y + i});
+                 }
              }
          }
 
@@ -148,21 +162,27 @@ const MathChessBoard: React.FC = () => {
          for (let i = 2; x + i < 15 && y - i >= 0; i++) {
              if (boardModel[x + i][y - i].player === Player.EMPTY &&
                  (boardModel[x + i - 1][y - i + 1].player === Player.PLAYER1 || boardModel[x + i - 1][y - i + 1].player === Player.PLAYER2)){
-                 validMoves.push({x: x + i, y: y - i});
+                 if (!pastPositions.some(pos => pos.x === x + i && pos.y === y - i)) {
+                     validMoves.push({x: x + i, y: y - i});
+                 }
              }
          }
 
          for (let i = 2; x + i < 15 && y + i < 15; i++){
              if (boardModel[x + i][y + i].player === Player.EMPTY &&
                  (boardModel[x + i - 1][y + i - 1].player === Player.PLAYER1 || boardModel[x + i - 1][y + i - 1].player === Player.PLAYER2)){
-                 validMoves.push({x: x + i, y: y + i});
+                 if (!pastPositions.some(pos => pos.x === x + i && pos.y === y + i)) {
+                     validMoves.push({x: x + i, y: y + i});
+                 }
              }
          }
 
          for (let i = 2; x - i >= 0 && y - i >= 0; i++) {
              if (boardModel[x - i][y - i].player === Player.EMPTY &&
                  (boardModel[x - i + 1][y - i + 1].player === Player.PLAYER1 || boardModel[x - i + 1][y - i + 1].player === Player.PLAYER2)){
-                 validMoves.push({x: x - i, y: y - i});
+                 if (!pastPositions.some(pos => pos.x === x - i && pos.y === y - i)) {
+                     validMoves.push({x: x - i, y: y - i});
+                 }
              }
          }
 
@@ -170,7 +190,9 @@ const MathChessBoard: React.FC = () => {
              if (x + 1 > 15) break;
              if (boardModel[x - i][y + i].player === Player.EMPTY &&
                  (boardModel[x - i + 1][y + i - 1].player === Player.PLAYER1 || boardModel[x - i + 1][y + i - 1].player === Player.PLAYER2)){
-                 validMoves.push({x: x - i, y: y + i});
+                 if (!pastPositions.some(pos => pos.x === x - i && pos.y === y + i)) {
+                     validMoves.push({x: x - i, y: y + i});
+                 }
              }
          }
 
@@ -216,7 +238,11 @@ const MathChessBoard: React.FC = () => {
         if (!nextToEachOther(oldPiece.x, oldPiece.y, newX, newY)) {
             setHighlightPiece(findValidConseqJumpMoves(newX, newY));
             setNumbersPassedBy(findNumbersPassedBy(oldPiece.x, oldPiece.y, newX, newY));
+            setConseqJumpNumbers(prevState => [...prevState,findNumbersPassedBy(oldPiece.x, oldPiece.y, newX, newY)]);
+            setConseqJumpCount(prevState => (prevState + 1));
             //console.log(numbersPassedBy);
+            //console.log(conseqJumpNumbers);
+            //console.log(conseqJump);
         } else {
             setNumbersPassedBy([]);
         }
@@ -226,13 +252,21 @@ const MathChessBoard: React.FC = () => {
     }
 
     const cancelMove = () => {
-            const move: { oldX: number; oldY: number; newX: number; newY: number; }|undefined = turnHistory.pop();
+        while (turnHistory.length > 0) {
+            const move: { oldX: number; oldY: number; newX: number; newY: number; } | undefined = turnHistory.pop();
             if (move === undefined) return;
             const movingPiece = boardModel[move.newX][move.newY];
             boardModel[move.oldX][move.oldY] = new Piece(movingPiece.player, movingPiece.value, move.oldX, move.oldY, false);
             boardModel[move.newX][move.newY] = new Piece(Player.EMPTY, -1, move.newX, move.newY);
-            setSelectedPiece(undefined);
-            setHasMoved(false);
+        }
+        setSelectedPiece(undefined);
+        setHasMoved(false);
+        setConseqJumpCount(0);
+        setConseqJumpNumbers([]);
+        highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = false);
+        setHighlightPiece([]);
+        setNumbersPassedBy([]);
+        setBoard([...boardModel]);
     }
 
     const drawPiece = (x: number, y: number, piece: Piece) => {
@@ -280,6 +314,7 @@ const MathChessBoard: React.FC = () => {
             if (hasMoved) {
                 return
             }
+            
             if (selectedPiece) {
                 boardModel[selectedPiece?.x][selectedPiece?.y].clicked = false;
             }
@@ -326,12 +361,23 @@ const MathChessBoard: React.FC = () => {
         setHighlightPiece([]);
         setSelectedPiece(undefined);
         setHasMoved(false);
+        setNumbersPassedBy([]);
+        setConseqJumpCount(0);
+        setConseqJumpNumbers([]);
         setBoard([...boardModel]);
+
     }
 
     const switchTurn = () => {
-        if (turnHistory.length > 0) {
-            boardHistory.push({oldX: turnHistory[0].oldX, oldY: turnHistory[0].oldY, newX: turnHistory[turnHistory.length - 1].newX, newY: turnHistory[turnHistory.length - 1].newY})
+        if (turnHistory.length === 0 ||
+            (turnHistory[0].oldX === turnHistory[turnHistory.length -1].newX && turnHistory[0].oldY === turnHistory[turnHistory.length -1].newY )) {
+            setErrorMessage(true);
+            return;
+        }
+        boardHistory.push({oldX: turnHistory[0].oldX, oldY: turnHistory[0].oldY, newX: turnHistory[turnHistory.length - 1].newX, newY: turnHistory[turnHistory.length - 1].newY})
+
+       while (turnHistory.length > 0) {
+            turnHistory.pop();
         }
 
         if (turn === Player.PLAYER1) {
@@ -344,24 +390,9 @@ const MathChessBoard: React.FC = () => {
             boardModel[selectedPiece?.x][selectedPiece?.y].clicked = false;
             setSelectedPiece(undefined);
         }
+        setConseqJumpCount(0);
+        setConseqJumpNumbers([]);
         highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = false);
-        setBoard([...boardModel]);
-    }
-
-    const restartTurn = () => {
-        if (turnHistory.length > 0) {
-            const movingPiece = boardModel[turnHistory[turnHistory.length - 1].newX][turnHistory[turnHistory.length - 1].newY];
-            boardModel[turnHistory[turnHistory.length - 1].newX][turnHistory[turnHistory.length - 1].newY] = new Piece(Player.EMPTY, -1, turnHistory[turnHistory.length - 1].newX, turnHistory[turnHistory.length - 1].newY);
-            boardModel[turnHistory[0].oldX][turnHistory[0].oldY] = new Piece(movingPiece.player, movingPiece.value, turnHistory[0].oldX, turnHistory[0].oldY);
-        }
-        turnHistory.length = 0;
-        if (selectedPiece) {
-            boardModel[selectedPiece?.x][selectedPiece?.y].clicked = false;
-        }
-        setSelectedPiece(undefined);
-        highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = false);
-        setHighlightPiece([]);
-        setHasMoved(false);
         setBoard([...boardModel]);
     }
 
@@ -381,15 +412,19 @@ const MathChessBoard: React.FC = () => {
             <Button onClick={resetBoard}>
                 Restart
             </Button>
-            <Button onClick={numbersPassedBy.length > 1 ? handleShowModal : switchTurn}>
+            <Button onClick={conseqJumpCount <= 1 && numbersPassedBy.length <= 1 ? switchTurn : handleShowModal}>
                 Next
             </Button>
-            <Button onClick={restartTurn}>
+            <Button onClick={cancelMove}>
                 Reset
             </Button>
             <label>Player {turn.toString()}</label>
+            <div className="errorMessage">
+                {errorMessage &&
+                    <p>Wrong calculation. Please try again.</p> }
+            </div>
         </div>
-            {selectedPiece && <Modal isOpen={showModal} onClose={handleCloseModal} numbers={numbersPassedBy} goal={board[selectedPiece?.x][selectedPiece?.y].value} />}
+            {selectedPiece && <Modal isOpen={showModal} onClose={handleCloseModal} conseqJumpNumbers={conseqJumpNumbers} goal={board[selectedPiece?.x][selectedPiece?.y].value} />}
         </div>
 
     );
