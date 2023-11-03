@@ -1,15 +1,14 @@
 .modal {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 500px;
-    height: 500px;
-    transform: translate(-50%, -50%);
-    background-color: white;
+    top: 0px;
+    left: 0px;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(63, 60, 60, 0.76);
     border-radius: 5px;
     padding: 20px;
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
-    z-index: 1001; /* Ensure it's above the overlay */
+    z-index: 1001;
 }
 
 .modal-board {
@@ -21,4 +20,107 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
 }
+
+
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #fff;
+    padding: 20px;
+    height: 60%;
+    width: 40%;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+h2 {
+    font-size: 24px;
+    color: #333;
+}
+
+.modal-text-content {
+    height: 78%;
+}
+
+.custom-scrollbar {
+    max-height: 100%;
+    overflow-y: auto;
+    margin-top: 20px;
+}
+
+
+.modal-board button {
+    background-color: #f0f0f0;
+    border: none;
+    border-radius: 5px;
+    margin: 5px;
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.signs button {
+    background-color: #eee7e7;
+    border: 2px black;
+    border-radius: 5px;
+    margin: 5px;
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.numbers button {
+    background-color: #eee7e7;
+    border: none;
+    border-radius: 5px;
+    margin: 5px;
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.modal-clear,
+.modal-delete {
+    background-color: #f199b6;
+    border: none;
+    border-radius: 5px;
+    margin: 5px;
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+    color: white;
+}
+
+.modal-close {
+    padding-bottom: 45px;
+}
+
+.modal-close button {
+    background-color: #6699cc;
+    border: none;
+    width: 47%;
+    border-radius: 5px;
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 18px;
+    color: #fff;
+    cursor: pointer;
+}
+
+.modal-errorMessage {
+    margin-top: 10px;
+}
+
+.modal-errorMessage p {
+    color: #ff3333;
+    font-size: 14px;
+}
+
+/* Add any additional styles as needed */

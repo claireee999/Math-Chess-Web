@@ -1,5 +1,7 @@
 import React, {FC, ReactNode, useEffect, useState} from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import "./style.css"
+import {faCheck, faDeleteLeft, faTrash, faXmark} from "@fortawesome/free-solid-svg-icons";
 
 interface ModalProps {
     isOpen: boolean;
@@ -29,7 +31,7 @@ const Modal: FC<ModalProps> = ({ isOpen, onClose, conseqJumpNumbers, goal}) => {
     }, [conseqJumpNumbers]);
 
     const signs = ["+", "-", "\u00d7","\u00f7", "(", ")"];
-    const [errorMessage, setErrorMessage] = useState<boolean>(false);
+    const [errorMessage, setErrorMessage] = useState<string>();
 
     const handleClickSign = ( sign: string, index: number ) => {
         setContents(prevContent => {
@@ -89,8 +91,6 @@ const Modal: FC<ModalProps> = ({ isOpen, onClose, conseqJumpNumbers, goal}) => {
             })))
         });
 
-       // const updatedUsedNumbers = usedNumbers.map(() => false);
-        //setUsedNumbers(updatedUsedNumbers);
     }
 
     const handleDelete = (index: number) => {
@@ -118,6 +118,20 @@ const Modal: FC<ModalProps> = ({ isOpen, onClose, conseqJumpNumbers, goal}) => {
     }
 
     const handleSubmit = () => {
+        for (let i = 0; i < usedNumbers.length; i++) {
+            for (let j = 0; j < usedNumbers[i].length; j++) {
+                if (!usedNumbers[i][j]) {
+                    setErrorMessage("You must use all numbers. Please try again.");
+                    if (contents.length === 1) {
+                        handleClear(0);
+                    } else {
+                        handleReset();
+                    }
+                    return;
+                }
+            }
+        }
+
         if (contents.length === 1) {
             const expression = contents[0].join('').replace('\u00d7', '*').replace(/\u00f7/g, '/');
             const result = eval(expression);
@@ -125,7 +139,8 @@ const Modal: FC<ModalProps> = ({ isOpen, onClose, conseqJumpNumbers, goal}) => {
                 onClose(true)
             } else {
                 handleClear(0);
-                setErrorMessage(true);
+                setErrorMessage("Wrong calculation. Please try again.");
+                return;
             }
         } else {
             const results: number[] = [];
@@ -137,7 +152,7 @@ const Modal: FC<ModalProps> = ({ isOpen, onClose, conseqJumpNumbers, goal}) => {
             for (let i = 0; i < results.length - 1; i++) {
                 if (results[i] !== results[i+1]) {
                     handleReset();
-                    setErrorMessage(true);
+                    setErrorMessage("Wrong calculation. Please try again.");
                     return;
                 }
             }
@@ -154,11 +169,12 @@ const Modal: FC<ModalProps> = ({ isOpen, onClose, conseqJumpNumbers, goal}) => {
         return null;
     }
 
-
     return (
         <div className="modal">
             <div className="modal-content">
-                <h2>Show your calculation:</h2>
+                <h2>{contents.length === 1 ? "Show your calculation" : "Make them equal" }</h2>
+                <div className="modal-text-content">
+                <div className="custom-scrollbar">
                 {conseqJumpNumbers.map((numbers, listIndex) => (
                     <>
                         <div className="modal-board">
@@ -185,27 +201,28 @@ const Modal: FC<ModalProps> = ({ isOpen, onClose, conseqJumpNumbers, goal}) => {
                         </div>
                         <div>
                             <button className="modal-clear" onClick={() => handleClear(listIndex)}>
-                                Clear
+                                <FontAwesomeIcon icon={faTrash} />
                             </button>
                             <button className="modal-delete" onClick={() => handleDelete(listIndex)}>
-                                delete
+                                <FontAwesomeIcon icon={faDeleteLeft} />
                             </button>
                         </div>
                     </>
                 ))}
+                </div>
                 <div className="modal-errorMessage">
-                    {errorMessage &&
-                        <p>Wrong calculation. Please try again.</p> }
+                    <p>{errorMessage}</p>
                 </div>
-                <div>
-                    <button className="modal-close" onClick={handleCancel}>
-                        Cancel
+                </div>
+                <div className="modal-close" >
+                    <button onClick={handleCancel}>
+                        <FontAwesomeIcon icon={faXmark} />
                     </button>
-                    <button className="modal-submit" onClick={handleSubmit}>
-                        Submit
+                    <button onClick={handleSubmit}>
+                        <FontAwesomeIcon icon={faCheck} />
                     </button>
                 </div>
-             </div>
+        </div>
         </div>
     );
 };

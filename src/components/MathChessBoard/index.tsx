@@ -1,7 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import {Button, useBoolean} from "@chakra-ui/react";
+// import Sound from "react-sound";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {faCog, faChevronRight, faRotateLeft, faForwardFast} from '@fortawesome/free-solid-svg-icons';
 import { initialBoard } from './initialBoard';
+import  { player1Positions } from './player1Positions';
+import  { player2Positions } from './player2Positions';
 import Modal from '../Modal';
+import EndGameModal from "../EndGameModal";
+import RuleModal from "../RuleModal";
+import SettingsModal from "../SettingsModal";
+import "./style.css"
+import {useErrorMessage} from "../../hooks/useErrorMessage";
+
 
 enum Player {
     EMPTY,
@@ -43,26 +53,36 @@ const MathChessBoard: React.FC = () => {
     const [turn, setTurn] = useState<Player>(Player.PLAYER1);
     const [hasMoved, setHasMoved] = useState(false);
 
-    const player1: string[] = ["#FBB6CE", "#F687B3"];
-    const player2: string[] = ["#BEE3F8", "#90CDF4"];
+    const player1: string[] = ["#ff99c2", "#ff6699", "rgba(255,102,153,0.5)"];
+    const player2: string[] = [ "#99ccff","#6699cc", "rgba(102,153,204,0.5)"];
     const empty: string = "#FFFFFF";
-    const background: string = "#FED7E2";
 
     const [selectedPiece, setSelectedPiece] = useState<{x: number, y: number}>();
     const [highlightPiece, setHighlightPiece] = useState<{x: number, y: number}[]>([]);
 
     const [showModal, setShowModal] = useState(false);
+    const [showEndGameModal, setShowEndGameModal] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [showRuleModal, setShowRuleModal] = useState(false);
     const [numbersPassedBy, setNumbersPassedBy] = useState<number[]>([]);
-    //const numbersPassedBy : number[] = [];
-    const [conseqJumpCount, setConseqJumpCount] = useState(0);
     const [conseqJumpNumbers, setConseqJumpNumbers] = useState<number[][]>([]);
 
-    const [errorMessage, setErrorMessage] = useState<boolean>(false);
+    const { errorMessage, isVisible, showError, hideError } = useErrorMessage();
 
-    //const conseqJumpNumbers : number[][] = [];
+    const [player1points, setPlayer1points] = useState([0,0,0,0,0,0,0,0,0,0]);
+    const [player2points, setPlayer2points] = useState([0,0,0,0,0,0,0,0,0,0]);
+
+    const SoundEffect = () => {
+        const [isPlaying, setIsPlaying] = useState(false);
+
+        const playSound = () => {
+            setIsPlaying(true);
+        }
+    }
+
     const handleShowModal = () => {
         setShowModal(true);
-    };
+    }
 
     const handleCloseModal = (shouldSwitch: boolean) => {
         setShowModal(false);
@@ -71,8 +91,32 @@ const MathChessBoard: React.FC = () => {
         } else {
             cancelMove();
         }
-    };
+    }
 
+    const handleShowEndGameModal = () => {
+        setShowEndGameModal(true);
+    }
+
+    const handleCloseEndGameModal = () => {
+        setShowEndGameModal(false);
+    }
+
+    const handleShowSettingsModal = () => {
+        setShowSettingsModal(true);
+    }
+
+    const handleCloseSettingsModal = () => {
+        setShowSettingsModal(false);
+    }
+
+    const handleShowRuleModal = () => {
+        handleCloseSettingsModal();
+        setShowRuleModal(true);
+    }
+
+    const handleCloseRuleModal = () => {
+        setShowRuleModal(false);
+    }
 
     const initializeBoard = () => {
         for (let row = 0; row < 15; row++) {
@@ -239,7 +283,7 @@ const MathChessBoard: React.FC = () => {
             setHighlightPiece(findValidConseqJumpMoves(newX, newY));
             setNumbersPassedBy(findNumbersPassedBy(oldPiece.x, oldPiece.y, newX, newY));
             setConseqJumpNumbers(prevState => [...prevState,findNumbersPassedBy(oldPiece.x, oldPiece.y, newX, newY)]);
-            setConseqJumpCount(prevState => (prevState + 1));
+            //setConseqJumpCount(prevState => (prevState + 1));
             //console.log(numbersPassedBy);
             //console.log(conseqJumpNumbers);
             //console.log(conseqJump);
@@ -247,6 +291,7 @@ const MathChessBoard: React.FC = () => {
             setNumbersPassedBy([]);
         }
         // console.log(findValidMoves(newX,newY));
+        //playSound();
         setHasMoved(true);
         return true;
     }
@@ -261,7 +306,7 @@ const MathChessBoard: React.FC = () => {
         }
         setSelectedPiece(undefined);
         setHasMoved(false);
-        setConseqJumpCount(0);
+        //setConseqJumpCount(0);
         setConseqJumpNumbers([]);
         highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = false);
         setHighlightPiece([]);
@@ -274,7 +319,7 @@ const MathChessBoard: React.FC = () => {
             [Player.PLAYER1]: player1[Number(piece.clicked)],
             [Player.PLAYER2]: player2[Number(piece.clicked)],
             [Player.NONE]: 'transparent',
-            [Player.EMPTY]: empty
+            [Player.EMPTY]: empty,
         };
 
         const style: React.CSSProperties = {
@@ -287,22 +332,38 @@ const MathChessBoard: React.FC = () => {
             borderRadius: "50%",
             border: "solid #000",
             borderWidth: piece.highlight ? "5px" : "0",
-            borderColor: "rgba(23,248,177,0.73)",
+            borderColor: turn === Player.PLAYER1 ? player1[2] : player2[2],
             backgroundColor: pieceStyles[piece.player],
+            display: piece.player === Player.NONE ? "none" : "block",
             zIndex: piece.player === Player.NONE ? "-1" : "1",
             textAlign: "center",
             verticalAlign: "middle",
-        };
+            boxShadow: "2px 2px 5px rgba(0, 0, 0, 0.5)",
+
+    };
 
        const textStyle: React.CSSProperties = {
             display:"inline-block",
             verticalAlign: "middle",
             lineHeight: "normal",
+            fontSize: "18px",
+            fontWeight: "bolder",
+    };
+        const baseStyle: React.CSSProperties = {
+            display:"inline-block",
+            verticalAlign: "middle",
+            lineHeight: "normal",
+            fontSize: "18px",
+            fontWeight: "bolder",
+            color:"lightgrey"
         };
 
         const handleClick = () => {
             if (piece.player === Player.NONE) {
                 return
+            }
+            if (showEndGameModal) {
+                return;
             }
             highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = false);
             if (piece.player === Player.EMPTY) {
@@ -329,10 +390,23 @@ const MathChessBoard: React.FC = () => {
             }
         };
 
+        let baseNumber = player1Positions.findIndex(pair => pair.x === piece.x && pair.y === piece.y);
+        if (baseNumber === -1) {
+            baseNumber = player2Positions.findIndex(pair => pair.x === piece.x && pair.y === piece.y);
+        }
+
         return (
             <div style={style} onClick={handleClick}>
-                {piece.value >= 0 && <span style={textStyle}>
-                    {piece.value}</span>}
+                {piece.value >= 0 ?
+                    <span style={textStyle}>
+                        {piece.value}
+                    </span>
+                    :
+                    baseNumber !== -1 &&
+                        <span style={baseStyle}>
+                            {baseNumber}
+                        </span>
+                }
             </div>
         );
     };
@@ -362,16 +436,20 @@ const MathChessBoard: React.FC = () => {
         setSelectedPiece(undefined);
         setHasMoved(false);
         setNumbersPassedBy([]);
-        setConseqJumpCount(0);
+        //setConseqJumpCount(0);
         setConseqJumpNumbers([]);
         setBoard([...boardModel]);
-
+        setShowModal(false);
+        setShowEndGameModal(false);
+        hideError();
+        setPlayer1points([0,0,0,0,0,0,0,0,0,0]);
+        setPlayer2points([0,0,0,0,0,0,0,0,0,0]);
     }
 
     const switchTurn = () => {
         if (turnHistory.length === 0 ||
             (turnHistory[0].oldX === turnHistory[turnHistory.length -1].newX && turnHistory[0].oldY === turnHistory[turnHistory.length -1].newY )) {
-            setErrorMessage(true);
+            showError("Please make a move.");
             return;
         }
         boardHistory.push({oldX: turnHistory[0].oldX, oldY: turnHistory[0].oldY, newX: turnHistory[turnHistory.length - 1].newX, newY: turnHistory[turnHistory.length - 1].newY})
@@ -385,21 +463,70 @@ const MathChessBoard: React.FC = () => {
         } else {
             setTurn(Player.PLAYER1)
         }
+        hideError();
         setHasMoved(false);
         if (selectedPiece) {
             boardModel[selectedPiece?.x][selectedPiece?.y].clicked = false;
             setSelectedPiece(undefined);
         }
-        setConseqJumpCount(0);
+        //setConseqJumpCount(0);
         setConseqJumpNumbers([]);
         highlightPiece.forEach(piece => boardModel[piece.x][piece.y].highlight = false);
         setBoard([...boardModel]);
     }
 
+    const canEndGame = (player: Player) => {
+        const player1positions: {x: number; y: number;}[] = [...player1Positions];
+        const player2positions: {x: number; y: number;}[] = [...player2Positions];
+        let positions: {x: number; y: number;}[] = [];
+        if (player === Player.PLAYER1) {
+            positions = player2positions;
+        } else {
+            positions = player1positions;
+        }
+        if (positions.some(position => boardModel[position.x][position.y].player !== player)) {
+                showError("You cannot end the game now.");
+                return;
+        }
 
+        setPlayer1points(prevPoints => (
+            prevPoints.map((point, i) => (
+                    boardModel[player2positions[i].x][player2positions[i].y].value
+                )
+            )
+        ));
+        setPlayer2points(prevPoints => (
+            prevPoints.map((point, i) => (
+                    boardModel[player1positions[i].x][player1positions[i].y].value
+                )
+            )
+        ));
+        /*for (let i = 0; i <= 9; i++) {
+            player1points[i] = boardModel[player2positions[i].x][player2positions[i].y].value;
+            player2points[i] = boardModel[player1positions[i].x][player1positions[i].y].value;
+        }*/
+        handleShowEndGameModal();
+    }
+
+    /*<Sound
+                url="/sounds/bouncing_sound.mp3"
+                playStatus={isPlaying ? Sound.status.PLAYING : Sound.status.STOPPED}
+                onFinishedPlaying={() => setIsPlaying(false)}
+            />
+
+     */
     return (
-        <div>
-        <div style={{ position: "relative", width: "100vw", height: "100vh", backgroundColor: background }}>
+        <>
+
+        <div className="container">
+            <div className="title">
+                Math Chess
+            </div>
+            <div className="setting-button" onClick={handleShowSettingsModal}>
+                <button>
+                    <FontAwesomeIcon icon={faCog} className="icon" />
+                </button>
+            </div>
             {board.map((row, rowIndex) => (
                 <div key={rowIndex} style={{ display: 'flex' }}>
                     {row.map((value, colIndex) => (
@@ -409,23 +536,58 @@ const MathChessBoard: React.FC = () => {
                     ))}
                 </div>
             ))}
-            <Button onClick={resetBoard}>
-                Restart
-            </Button>
-            <Button onClick={conseqJumpCount <= 1 && numbersPassedBy.length <= 1 ? switchTurn : handleShowModal}>
-                Next
-            </Button>
-            <Button onClick={cancelMove}>
-                Reset
-            </Button>
-            <label>Player {turn.toString()}</label>
-            <div className="errorMessage">
-                {errorMessage &&
-                    <p>Wrong calculation. Please try again.</p> }
+
+            <div className={"player1-buttons"}>
+                <div className={`player-label1 ${turn === Player.PLAYER1 ? 'highlight1' : ''}`}>
+                    <span className="label-text">Player 1</span>
+                </div>
+                <div>
+                    <button title="Next Turn" onClick={turn === Player.PLAYER1? (conseqJumpNumbers.length <= 1 && numbersPassedBy.length <= 1 ? switchTurn : handleShowModal): undefined}>
+                       <FontAwesomeIcon icon={faChevronRight} className={"icon"}/>
+                    </button>
+                    <button title="Reset Current Turn" onClick={turn === Player.PLAYER1 ? cancelMove : undefined}>
+                        <FontAwesomeIcon icon={faRotateLeft} />
+                    </button>
+                    <button title="Call End Game" onClick={turn === Player.PLAYER1 ? () => canEndGame(turn): undefined}>
+                    <FontAwesomeIcon icon={faForwardFast} />
+                </button>
+                    <span className={`error-message ${isVisible ? '' : 'fadeout'}`}>
+                        {turn===Player.PLAYER1 && errorMessage}
+                    </span>
+                </div>
+
             </div>
+            <div className={"player2-buttons"}>
+                <div className={`player-label2 ${turn === Player.PLAYER2 ? 'highlight2' : ''}`}>
+                    <span className="label-text">Player 2</span>
+                </div>
+                <div>
+                     <span className={`error-message ${isVisible ? '' : 'fadeout'}`}>
+                        {turn===Player.PLAYER2 && errorMessage}
+                    </span>
+                    <button title="Next Turn" onClick={turn === Player.PLAYER2 ? (conseqJumpNumbers.length <= 1 && numbersPassedBy.length <= 1 ? switchTurn : handleShowModal) : undefined}>
+                        <FontAwesomeIcon icon={faChevronRight} className={"icon"}/>
+                    </button>
+                    <button title="Reset Current Turn" onClick={turn === Player.PLAYER2 ? cancelMove : undefined}>
+                    <FontAwesomeIcon icon={faRotateLeft} />
+                </button>
+                     <button title="Call End Game" onClick={turn === Player.PLAYER2 ? () => canEndGame(turn): undefined}>
+                    <FontAwesomeIcon icon={faForwardFast} />
+                </button>
+
+                </div>
+
+            </div>
+
+
         </div>
+
             {selectedPiece && <Modal isOpen={showModal} onClose={handleCloseModal} conseqJumpNumbers={conseqJumpNumbers} goal={board[selectedPiece?.x][selectedPiece?.y].value} />}
-        </div>
+            <EndGameModal isOpen={showEndGameModal} onClose={handleCloseEndGameModal} startNewGame={resetBoard} player1points={player1points} player2points={player2points} />
+            <SettingsModal isOpen={showSettingsModal} onClose={handleCloseSettingsModal} restart={resetBoard} handleHelp={handleShowRuleModal}/>
+            <RuleModal isOpen={showRuleModal} onClose={handleCloseRuleModal}/>
+
+        </>
 
     );
 };
