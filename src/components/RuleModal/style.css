@@ -22,7 +22,6 @@
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-    text-align: center;
     z-index: 1001;
 }
 
@@ -35,11 +34,16 @@
     font-size: 36px;
 }
 
-.RuleModal button {
-    position: fixed;
-    alignment: center;
-    width: 200px;
+.back-button {
+    width: 100%;
+    height: 200px;
+    text-align: center;
+}
+
+.back-button button {
+    position: absolute;
     bottom: 50px;
+    width: 200px;
     background-color: rgb(102, 153, 204);
     border: none;
     color: white;
@@ -49,7 +53,9 @@
     font-size: 18px;
     cursor: pointer;
     transition: background-color 0.3s ease;
+    transform: translate(-50%, -50%);
 }
+
 
 
 

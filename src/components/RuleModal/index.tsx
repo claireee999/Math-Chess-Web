@@ -31,9 +31,11 @@ const RuleModal: FC<ModalProps> = ({ isOpen, onClose}) => {
                 </ol>
             </div>
 
-            <button onClick={onClose}>
-                Back To Game
-            </button>
+                <div className="back-button">
+                    <button onClick={onClose}>
+                        Back To Game
+                    </button>
+                </div>
             </div>
         </div>
     )
